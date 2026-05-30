@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🚛 Driver GPS Sender</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 420px;
+            margin: 30px auto;
+            background: rgba(255,255,255,0.12);
+            padding: 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+        }
+        h2 { text-align: center; margin-bottom: 20px; }
+        select, input, button {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        select, input { background: rgba(255,255,255,0.95); color: #333; }
+        button { font-weight: bold; cursor: pointer; }
+        .login-btn { background: #4CAF50; color: white; }
+        .start-btn { background: #2196F3; color: white; }
+        .stop-btn { background: #f44336; color: white; }
+        .status { margin-top: 15px; padding: 18px; border-radius: 12px; text-align: center; min-height: 70px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="container" id="loginScreen">
+    <h2>🚛 Driver GPS Sender</h2>
+    <label><strong>Select Vehicle</strong></label>
+    <select id="vehicleSelect"></select>
+    <input type="password" id="password" placeholder="Password (any for demo)" value="1234">
+    <button class="login-btn" onclick="login()">Login & Start Tracking</button>
+</div>
+
+<div class="container hidden" id="trackingScreen">
+    <h2>Live Trip Tracking</h2>
+    <p><strong>Vehicle:</strong> <span id="currentVehicle" style="color:#FFD700; font-size:18px;"></span></p>
+    
+    <button class="start-btn" id="startBtn" onclick="startTracking()">🚀 Start Trip</button>
+    <button class="stop-btn" onclick="stopTracking()">⛔ End Trip</button>
+
+    <div class="status" id="status">Ready to track</div>
+
+    <div class="summary hidden" id="tripSummary">
+        <h3>Trip Summary</h3>
+        <p><strong>Duration:</strong> <span id="duration">0 min</span></p>
+        <p><strong>Total Distance:</strong> <span id="distance">0.00 km</span></p>
+        <p><strong>Avg Speed:</strong> <span id="avgSpeed">0 km/h</span></p>
+        <p><strong>Max Speed:</strong> <span id="maxSpeed">0 km/h</span></p>
+        <button onclick="restartTrip()">Start New Trip</button>
+    </div>
+</div>
+
+<script>
+let vehicleId = "";
+
+async function loadVehicles() {
+    try {
+        const res = await fetch('/vehicles');
+        const vehicles = await res.json();
+        const select = document.getElementById('vehicleSelect');
+        select.innerHTML = '<option value="">-- Select Vehicle --</option>';
+
+        vehicles.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.vehicle_id;
+            opt.textContent = `${v.vehicle_id} - ${v.vehicle_name || 'No Name'}`;
+            select.appendChild(opt);
+        });
+    } catch(e) {
+        console.log("Could not load vehicles");
+    }
+}
+
+function login() {
+    vehicleId = document.getElementById('vehicleSelect').value.trim();
+    if (!vehicleId) {
+        alert("❌ Please select a Vehicle");
+        return;
+    }
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('trackingScreen').classList.remove('hidden');
+    document.getElementById('currentVehicle').textContent = vehicleId;
+}
+
+function startTracking() {
+    // ... (your existing startTracking function - keep as is)
+    alert("Tracking started for " + vehicleId);
+    // Your full tracking code here...
+}
+
+// Keep your existing startTracking, stopTracking, getDistance, etc. functions below
+
+window.onload = loadVehicles;
+</script>
+</body>
+</html>
