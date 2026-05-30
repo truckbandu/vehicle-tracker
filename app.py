@@ -6,18 +6,16 @@ import os
 import math
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent', logger=True, engineio_logger=True)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 def init_db():
     conn = sqlite3.connect('trips.db')
     conn.execute('''CREATE TABLE IF NOT EXISTS vehicles 
                     (vehicle_id TEXT PRIMARY KEY, vehicle_name TEXT, driver_name TEXT, driver_phone TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS locations 
-                    (id INTEGER PRIMARY KEY, vehicle_id TEXT, lat REAL, lng REAL, 
-                     speed REAL, timestamp TEXT, trip_id TEXT)''')
+                    (id INTEGER PRIMARY KEY, vehicle_id TEXT, lat REAL, lng REAL, speed REAL, timestamp TEXT, trip_id TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS geofences 
-                    (id INTEGER PRIMARY KEY, name TEXT, lat REAL, lng REAL, 
-                     radius REAL, type TEXT)''')
+                    (id INTEGER PRIMARY KEY, name TEXT, lat REAL, lng REAL, radius REAL, type TEXT)''')
     conn.commit()
     conn.close()
 
@@ -41,44 +39,59 @@ def index():
 def mobile_sender():
     return send_from_directory('.', 'mobile_sender.html')
 
-# Add other routes (add_vehicle, vehicles, add_geofence, delete_geofence, track, etc.)
+@app.route('/vehicles')
+def get_vehicles():
+    conn = sqlite3.connect('trips.db')
+    cursor = conn.execute("SELECT * FROM vehicles")
+    vehicles = [{"vehicle_id": r[0], "vehicle_name": r[1], "driver_name": r[2], "driver_phone": r[3]} for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(vehicles)
+
 @app.route('/add_vehicle', methods=['POST'])
 def add_vehicle():
     try:
         data = request.json
         vehicle_id = data.get('vehicle_id', '').strip().upper()
+        if not vehicle_id:
+            return jsonify({"status": "error", "message": "Vehicle ID required"}), 400
+
         conn = sqlite3.connect('trips.db')
         conn.execute("INSERT OR REPLACE INTO vehicles VALUES (?, ?, ?, ?)",
                      (vehicle_id, data.get('vehicle_name','Unknown'), data.get('driver_name',''), data.get('driver_phone','')))
         conn.commit()
         conn.close()
-        return jsonify({"status": "success", "message": f"Vehicle {vehicle_id} added"})
+        return jsonify({"status": "success", "message": f"Vehicle {vehicle_id} added successfully"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/track', methods=['POST'])
-def track():
-    # Simplified version
-    data = request.json
-    vehicle_id = data.get('vehicle_id', '').strip().upper()
-    lat = float(data['lat'])
-    lng = float(data['lng'])
-    speed = float(data.get('speed', 0))
-    
+@app.route('/add_geofence', methods=['POST'])
+def add_geofence():
+    try:
+        data = request.json
+        conn = sqlite3.connect('trips.db')
+        conn.execute("INSERT INTO geofences (name, lat, lng, radius, type) VALUES (?, ?, ?, ?, ?)",
+                     (data['name'], data['lat'], data['lng'], data['radius'], data['type']))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": f"{data['type']} point added"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/geofences')
+def get_geofences():
     conn = sqlite3.connect('trips.db')
-    conn.execute("INSERT INTO locations (vehicle_id, lat, lng, speed, timestamp, trip_id) VALUES (?, ?, ?, ?, ?, ?)",
-                 (vehicle_id, lat, lng, speed, datetime.now().isoformat(), data.get('trip_id')))
+    cursor = conn.execute("SELECT * FROM geofences")
+    geofences = [{"id": r[0], "name": r[1], "lat": r[2], "lng": r[3], "radius": r[4], "type": r[5]} for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(geofences)
+
+@app.route('/delete_geofence/<int:geofence_id>', methods=['DELETE'])
+def delete_geofence(geofence_id):
+    conn = sqlite3.connect('trips.db')
+    conn.execute("DELETE FROM geofences WHERE id = ?", (geofence_id,))
     conn.commit()
     conn.close()
-
-    socketio.emit('location_update', {
-        'vehicle_id': vehicle_id,
-        'lat': lat,
-        'lng': lng,
-        'speed': round(speed, 1),
-        'timestamp': datetime.now().strftime("%H:%M:%S")
-    })
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "message": "Geofence deleted"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
