@@ -55,17 +55,17 @@
         <!-- Tab 2: Vehicles -->
         <div class="content" id="tab2">
             <h3>🚛 All Vehicles</h3>
-            <button onclick="loadVehicles()">🔄 Refresh List</button>
+            <button onclick="loadVehicles()">Refresh</button>
             <div id="vehicleList"></div>
         </div>
 
         <!-- Tab 3: Geofences -->
         <div class="content" id="tab3">
             <h3>📍 Add Pickup Point</h3>
-            <input type="text" id="fenceName" placeholder="Point Name">
+            <input type="text" id="fenceName" placeholder="Point Name (e.g. Factory A)">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">Refresh Map & List</button>
+            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -87,10 +87,9 @@
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    // ================= ADD VEHICLE =================
     async function addVehicle() {
         const vehId = document.getElementById('vehId').value.trim().toUpperCase();
-        if (!vehId) return alert("❌ Vehicle ID is required!");
+        if (!vehId) return alert("❌ Vehicle ID required!");
 
         const data = {
             vehicle_id: vehId,
@@ -107,57 +106,87 @@
             });
             const result = await res.json();
             alert(result.message);
-            if (result.status === "success") {
-                document.getElementById('vehId').value = '';
-                loadVehicles();        // ← Important: Refresh immediately
-            }
-        } catch(e) {
-            alert("❌ Server Error");
-        }
+            if (result.status === "success") loadVehicles();
+        } catch(e) { alert("Server Error"); }
     }
 
     async function loadVehicles() {
-        try {
-            const res = await fetch('/vehicles');
-            const vehicles = await res.json();
-            const container = document.getElementById('vehicleList');
-            container.innerHTML = '';
-
-            if (vehicles.length === 0) {
-                container.innerHTML = '<p>No vehicles added yet.</p>';
-                return;
-            }
-
-            vehicles.forEach(v => {
-                const div = document.createElement('div');
-                div.className = 'vehicle-item';
-                div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            document.getElementById('vehicleList').innerHTML = '<p>Error loading vehicles.</p>';
-        }
+        const res = await fetch('/vehicles');
+        const vehicles = await res.json();
+        const container = document.getElementById('vehicleList');
+        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
+        vehicles.forEach(v => {
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
+            container.appendChild(div);
+        });
     }
 
-    // Geofence functions (keep as before)
     async function addGeofence() {
         const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
         const center = map.getCenter();
-        const data = { name, lat: center.lat, lng: center.lng, radius: 500, type: "pickup" };
+
+        const data = {
+            name: name,
+            lat: center.lat,
+            lng: center.lng,
+            radius: 500,
+            type: "pickup"
+        };
 
         try {
-            const res = await fetch('/add_geofence', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            const res = await fetch('/add_geofence', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
             const result = await res.json();
             alert(result.message);
-            loadGeofences();
-        } catch(e) { alert("Failed to add geofence"); }
+            loadGeofences();           // ← Fixed: Refresh immediately after add
+        } catch(e) { 
+            alert("Failed to add geofence"); 
+        }
     }
 
     async function loadGeofences() {
-        // ... (same as previous version)
         geofenceCircles.forEach(c => map.removeLayer(c));
         geofenceCircles = [];
-        // ... rest of loadGeofences
+
+        const res = await fetch('/geofences');
+        const fences = await res.json();
+        const container = document.getElementById('geofenceList');
+        container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
+
+        fences.forEach(f => {
+            const circle = L.circle([f.lat, f.lng], {
+                color: 'green',
+                fillColor: '#4CAF50',
+                fillOpacity: 0.25,
+                radius: f.radius
+            }).addTo(map).bindPopup(`<b>${f.name}</b><br>Radius: ${f.radius}m`);
+            geofenceCircles.push(circle);
+
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `
+                <strong>${f.name}</strong><br>
+                📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}<br>
+                📏 ${f.radius} meters
+                <button class="delete-btn" onclick="deleteGeofence(${f.id}, '${f.name}')">🗑 Delete</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    async function deleteGeofence(id, name) {
+        if (!confirm(`Delete geofence "${name}"?`)) return;
+        try {
+            const res = await fetch(`/delete_geofence/${id}`, { method: 'DELETE' });
+            const result = await res.json();
+            alert(result.message);
+            loadGeofences();
+        } catch(e) { alert("Delete failed"); }
     }
 
     function startNewTrip() {
@@ -168,6 +197,7 @@
     window.onload = () => {
         initMap();
         loadVehicles();
+        loadGeofences();
     };
 </script>
 </body>
