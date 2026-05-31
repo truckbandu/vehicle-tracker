@@ -40,8 +40,6 @@ def init_db():
 
 init_db()
 
-# ====================== ROUTES ======================
-
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -67,7 +65,7 @@ def add_vehicle():
                       data.get('insurance_validity',''), data.get('puc_validity','')))
         conn.commit()
         conn.close()
-        return jsonify({"status": "success", "message": f"Vehicle {vehicle_id} added"})
+        return jsonify({"status": "success", "message": f"Vehicle {vehicle_id} added successfully"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -79,7 +77,34 @@ def get_vehicles():
     conn.close()
     return jsonify(vehicles)
 
-# Add other routes (add_geofence, delete_geofence, track, etc.) as before...
+@app.route('/add_geofence', methods=['POST'])
+def add_geofence():
+    try:
+        data = request.json
+        conn = sqlite3.connect('trips.db')
+        conn.execute("INSERT INTO geofences (name, lat, lng, radius, type) VALUES (?, ?, ?, ?, ?)",
+                     (data['name'], data['lat'], data['lng'], data['radius'], data['type']))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": f"{data['type']} point added"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/geofences')
+def get_geofences():
+    conn = sqlite3.connect('trips.db')
+    cursor = conn.execute("SELECT * FROM geofences")
+    geofences = [{"id": r[0], "name": r[1], "lat": r[2], "lng": r[3], "radius": r[4], "type": r[5]} for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(geofences)
+
+@app.route('/delete_geofence/<int:geofence_id>', methods=['DELETE'])
+def delete_geofence(geofence_id):
+    conn = sqlite3.connect('trips.db')
+    conn.execute("DELETE FROM geofences WHERE id = ?", (geofence_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Geofence deleted"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
