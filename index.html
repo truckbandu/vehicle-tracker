@@ -13,7 +13,7 @@
             width: 380px; max-height: 92vh; overflow-y:auto;
         }
         .tabs { display:flex; margin-bottom:15px; background:#f1f1f1; border-radius:8px; flex-wrap:wrap; }
-        .tab { flex:1; padding:12px; text-align:center; cursor:pointer; border-radius:8px; font-weight:bold; min-width:80px; }
+        .tab { flex:1; padding:12px; text-align:center; cursor:pointer; border-radius:8px; font-weight:bold; min-width:75px; }
         .tab.active { background:#4285F4; color:white; }
         .content { display:none; }
         .content.active { display:block; }
@@ -22,6 +22,7 @@
         .success-btn { background:#34A853; }
         .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
+        h4 { margin:15px 0 5px 0; color:#333; }
     </style>
 </head>
 <body>
@@ -47,38 +48,53 @@
         <div class="content" id="tab1">
             <h3>Add New Vehicle</h3>
             <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
-            <input type="text" id="vehName" placeholder="Vehicle Name">
+            <input type="text" id="vehName" placeholder="Vehicle Name (Optional)">
             <input type="text" id="make" placeholder="Make">
             <input type="text" id="model" placeholder="Model">
             <input type="text" id="chassisNo" placeholder="Chassis No">
             <input type="text" id="engineNo" placeholder="Engine No">
             <input type="text" id="tyres" placeholder="Tyres">
             <input type="text" id="ownerName" placeholder="Owner Name">
-            <input type="text" id="driverName" placeholder="Driver Name">
-            <input type="text" id="driverPhone" placeholder="Driver Phone">
-            <h4>Validity</h4>
+
+            <h4>📅 Validity Details</h4>
             <input type="date" id="rdValidity">
+            <label>RD Validity</label>
+            
             <input type="date" id="fitnessValidity">
+            <label>Fitness Validity</label>
+            
             <input type="date" id="permitValidity">
+            <label>Permit Validity</label>
+            
             <input type="date" id="insuranceValidity">
+            <label>Insurance Validity</label>
+            
             <input type="date" id="pucValidity">
+            <label>PUC Validity</label>
+
             <button onclick="addVehicle()">Add Vehicle</button>
         </div>
 
         <!-- Tab 2: Vehicles -->
         <div class="content" id="tab2">
             <h3>🚛 All Vehicles</h3>
-            <button onclick="loadVehicles()">Refresh List</button>
+            <button onclick="loadVehicles()">🔄 Refresh List</button>
             <div id="vehicleList"></div>
         </div>
 
         <!-- Tab 3: Drivers -->
         <div class="content" id="tab3">
-            <h3>👤 Add Driver</h3>
+            <h3>👤 Add New Driver</h3>
             <input type="text" id="driverName" placeholder="Driver Name">
             <input type="text" id="licenceNo" placeholder="Licence No">
-            <input type="text" id="driverMobile" placeholder="Mobile">
-            <!-- Add more driver fields as needed -->
+            <input type="text" id="driverMobile" placeholder="Mobile No">
+            <input type="text" id="homeNo" placeholder="Home No">
+            <input type="text" id="village" placeholder="Village">
+            <input type="text" id="district" placeholder="District">
+            <input type="text" id="state" placeholder="State">
+            <input type="text" id="pin" placeholder="PIN Code">
+            <input type="text" id="aadharNo" placeholder="Aadhar No">
+            <input type="text" id="agentName" placeholder="Agent Name">
             <button onclick="addDriver()">Add Driver</button>
         </div>
 
@@ -88,7 +104,7 @@
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">Refresh Map & List</button>
+            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -106,14 +122,13 @@
     }
 
     function showTab(n) {
-        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === n));
-        document.querySelectorAll('.content').forEach((c, i) => c.classList.toggle('active', i === n));
+        document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+        document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    // Add Vehicle Function
     async function addVehicle() {
         const vehId = document.getElementById('vehId').value.trim().toUpperCase();
-        if (!vehId) return alert("Vehicle ID is required!");
+        if (!vehId) return alert("❌ Vehicle ID is required!");
 
         const data = {
             vehicle_id: vehId,
@@ -142,7 +157,7 @@
             const result = await res.json();
             alert(result.message);
             if (result.status === "success") loadVehicles();
-        } catch(e) { alert("Server Error"); }
+        } catch(e) { alert("❌ Server Error"); }
     }
 
     async function loadVehicles() {
@@ -153,24 +168,58 @@
         vehicles.forEach(v => {
             const div = document.createElement('div');
             div.className = 'vehicle-item';
-            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
+            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.make} ${v.model || ''}`;
             container.appendChild(div);
         });
     }
 
-    // Placeholder functions
-    function addDriver() { alert("Driver form coming soon..."); }
-    async function addGeofence() { alert("Geofence added (Demo)"); loadGeofences(); }
-    async function loadGeofences() { /* ... */ }
+    function addDriver() {
+        alert("Driver Registration Form - Coming Soon");
+    }
+
+    async function addGeofence() {
+        const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
+        const center = map.getCenter();
+        const data = { name, lat: center.lat, lng: center.lng, radius: 500, type: "pickup" };
+
+        try {
+            const res = await fetch('/add_geofence', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            alert(result.message);
+            loadGeofences();
+        } catch(e) { alert("Failed to add geofence"); }
+    }
+
+    async function loadGeofences() {
+        geofenceCircles.forEach(c => map.removeLayer(c));
+        geofenceCircles = [];
+        const res = await fetch('/geofences');
+        const fences = await res.json();
+        const container = document.getElementById('geofenceList');
+        container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
+        fences.forEach(f => {
+            const circle = L.circle([f.lat, f.lng], {color:'green', fillColor:'#4CAF50', fillOpacity:0.25, radius: f.radius}).addTo(map);
+            geofenceCircles.push(circle);
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `<strong>${f.name}</strong><br>📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}`;
+            container.appendChild(div);
+        });
+    }
 
     function startNewTrip() {
         const id = document.getElementById('tripVehicleId').value.trim().toUpperCase();
-        if (id) alert(`Live tracking started for ${id}`);
+        if (id) alert(`✅ Live tracking started for ${id}`);
     }
 
     window.onload = () => {
         initMap();
         loadVehicles();
+        loadGeofences();
     };
 </script>
 </body>
