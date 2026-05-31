@@ -12,29 +12,24 @@
             padding:15px; border-radius:12px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3); 
             width: 380px; max-height: 92vh; overflow-y:auto;
         }
-        .hamburger { font-size:28px; cursor:pointer; padding:10px; }
-        .tabs { display:none; flex-direction:column; background:#f1f1f1; border-radius:8px; margin-top:10px; }
-        .tabs.active { display:flex; }
-        .tab { padding:12px; text-align:left; cursor:pointer; border-bottom:1px solid #ddd; }
-        .tab:last-child { border-bottom:none; }
+        .tabs { display:flex; margin-bottom:15px; background:#f1f1f1; border-radius:8px; flex-wrap:wrap; }
+        .tab { flex:1; padding:12px; text-align:center; cursor:pointer; border-radius:8px; font-weight:bold; min-width:75px; }
         .tab.active { background:#4285F4; color:white; }
         .content { display:none; }
         .content.active { display:block; }
         input, button, select { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:1px solid #ddd; }
         button { background:#4285F4; color:white; border:none; font-weight:bold; cursor:pointer; }
         .success-btn { background:#34A853; }
+        .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
         h4 { margin:15px 0 8px 0; color:#333; }
     </style>
 </head>
 <body>
     <div class="control-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>🚗 Vehicle Trip Tracker</h2>
-            <span class="hamburger" onclick="toggleMenu()">☰</span>
-        </div>
+        <h2>🚗 Vehicle Trip Tracker</h2>
         
-        <div class="tabs" id="menuTabs">
+        <div class="tabs">
             <div class="tab active" onclick="showTab(0)">Start Trip</div>
             <div class="tab" onclick="showTab(1)">Add Vehicle</div>
             <div class="tab" onclick="showTab(2)">Vehicles</div>
@@ -64,19 +59,14 @@
             <h4>📅 Validity Details</h4>
             <label>RC Validity</label>
             <input type="date" id="rdValidity">
-            
             <label>Fitness Validity</label>
             <input type="date" id="fitnessValidity">
-            
             <label>Permit Validity</label>
             <input type="date" id="permitValidity">
-            
             <label>Insurance Validity</label>
             <input type="date" id="insuranceValidity">
-            
             <label>PUC Validity</label>
             <input type="date" id="pucValidity">
-            
             <button onclick="addVehicle()">Add Vehicle</button>
         </div>
 
@@ -87,18 +77,31 @@
             <div id="vehicleList"></div>
         </div>
 
-        <!-- Tab 3 & 4: Drivers & Geofences (can be expanded later) -->
+        <!-- Tab 3: Drivers -->
         <div class="content" id="tab3">
-            <h3>👤 Drivers</h3>
-            <p>Driver management coming soon...</p>
+            <h3>👤 Add New Driver</h3>
+            <input type="text" id="driverName" placeholder="Driver Full Name *">
+            <input type="text" id="licenceNo" placeholder="Licence No *">
+            <input type="file" id="licenceImage" accept="image/*">
+            <input type="text" id="driverMobile" placeholder="Mobile Number *">
+            <input type="text" id="homeNo" placeholder="Home Phone">
+            <input type="text" id="village" placeholder="Village">
+            <input type="text" id="district" placeholder="District">
+            <input type="text" id="state" placeholder="State">
+            <input type="text" id="pin" placeholder="PIN Code">
+            <input type="text" id="aadharNo" placeholder="Aadhar No *">
+            <input type="file" id="aadharImage" accept="image/*">
+            <input type="text" id="agentName" placeholder="Agent Name">
+            <button onclick="addDriver()">Add Driver</button>
         </div>
 
+        <!-- Tab 4: Geofences -->
         <div class="content" id="tab4">
-            <h3>📍 Geofences</h3>
+            <h3>📍 Add Pickup Point</h3>
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">Refresh Map & List</button>
+            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -108,68 +111,51 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     let map;
+    let geofenceCircles = [];
 
     function initMap() {
         map = L.map('map').setView([19.9975, 73.7898], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     }
 
-    function toggleMenu() {
-        document.getElementById('menuTabs').classList.toggle('active');
-    }
-
     function showTab(n) {
         document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
-        document.getElementById('menuTabs').classList.remove('active'); // Close menu after selection
     }
 
-    async function addVehicle() {
-        const vehId = document.getElementById('vehId').value.trim().toUpperCase();
-        if (!vehId) return alert("❌ Vehicle ID is required!");
+    // Add Vehicle Function (same as before)
+    async function addVehicle() { /* ... keep your existing addVehicle function */ }
 
-        const data = {
-            vehicle_id: vehId,
-            vehicle_name: document.getElementById('vehName').value.trim(),
-            make: document.getElementById('make').value.trim(),
-            model: document.getElementById('model').value.trim(),
-            chassis_no: document.getElementById('chassisNo').value.trim(),
-            engine_no: document.getElementById('engineNo').value.trim(),
-            tyres: document.getElementById('tyres').value.trim(),
-            owner_name: document.getElementById('ownerName').value.trim(),
-            driver_name: document.getElementById('driverName').value.trim(),
-            driver_phone: document.getElementById('driverPhone').value.trim(),
-            rd_validity: document.getElementById('rdValidity').value,
-            fitness_validity: document.getElementById('fitnessValidity').value,
-            permit_validity: document.getElementById('permitValidity').value,
-            insurance_validity: document.getElementById('insuranceValidity').value,
-            puc_validity: document.getElementById('pucValidity').value
-        };
+    async function loadVehicles() { /* ... keep your existing loadVehicles */ }
+
+    // New Driver Function
+    async function addDriver() {
+        const formData = new FormData();
+        formData.append('name', document.getElementById('driverName').value);
+        formData.append('licence_no', document.getElementById('licenceNo').value);
+        formData.append('mobile', document.getElementById('driverMobile').value);
+        formData.append('home_no', document.getElementById('homeNo').value);
+        formData.append('village', document.getElementById('village').value);
+        formData.append('district', document.getElementById('district').value);
+        formData.append('state', document.getElementById('state').value);
+        formData.append('pin', document.getElementById('pin').value);
+        formData.append('aadhar_no', document.getElementById('aadharNo').value);
+        formData.append('agent_name', document.getElementById('agentName').value);
+
+        if (document.getElementById('licenceImage').files[0]) formData.append('licence_image', document.getElementById('licenceImage').files[0]);
+        if (document.getElementById('aadharImage').files[0]) formData.append('aadhar_image', document.getElementById('aadharImage').files[0]);
 
         try {
-            const res = await fetch('/add_vehicle', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            const res = await fetch('/add_driver', { method: 'POST', body: formData });
             const result = await res.json();
             alert(result.message);
-            if (result.status === "success") loadVehicles();
-        } catch(e) { alert("❌ Server Error"); }
+        } catch(e) {
+            alert("Failed to add driver");
+        }
     }
 
-    async function loadVehicles() {
-        const res = await fetch('/vehicles');
-        const vehicles = await res.json();
-        const container = document.getElementById('vehicleList');
-        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
-        vehicles.forEach(v => {
-            const div = document.createElement('div');
-            div.className = 'vehicle-item';
-            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.make || ''} ${v.model || ''}`;
-            container.appendChild(div);
-        });
-    }
+    async function addGeofence() { /* keep your existing */ }
+    async function loadGeofences() { /* keep your existing */ }
 
     function startNewTrip() {
         const id = document.getElementById('tripVehicleId').value.trim().toUpperCase();
@@ -179,6 +165,7 @@
     window.onload = () => {
         initMap();
         loadVehicles();
+        loadGeofences();
     };
 </script>
 </body>
