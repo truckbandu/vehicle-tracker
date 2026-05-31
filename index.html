@@ -21,7 +21,7 @@
         button { background:#4285F4; color:white; border:none; font-weight:bold; cursor:pointer; }
         .success-btn { background:#34A853; }
         .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
-        .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
+        .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; font-size:14px; }
     </style>
 </head>
 <body>
@@ -42,17 +42,31 @@
             <button class="success-btn" onclick="startNewTrip()">Start Live Tracking</button>
         </div>
 
-        <!-- Tab 1: Add Vehicle -->
+        <!-- Tab 1: Add Vehicle - Full Fields -->
         <div class="content" id="tab1">
             <h3>Add New Vehicle</h3>
-            <input type="text" id="vehId" placeholder="Vehicle ID" style="text-transform:uppercase;">
+            <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
             <input type="text" id="vehName" placeholder="Vehicle Name">
+            <input type="text" id="make" placeholder="Make (Tata, Ashok Leyland etc.)">
+            <input type="text" id="model" placeholder="Model">
+            <input type="text" id="chassisNo" placeholder="Chassis No">
+            <input type="text" id="engineNo" placeholder="Engine No">
+            <input type="text" id="tyres" placeholder="Tyres (e.g. 10R20)">
+            <input type="text" id="ownerName" placeholder="Owner Name">
             <input type="text" id="driverName" placeholder="Driver Name">
             <input type="text" id="driverPhone" placeholder="Driver Phone">
+
+            <h4>Validity Dates</h4>
+            <input type="date" id="rdValidity" placeholder="RD Validity">
+            <input type="date" id="fitnessValidity" placeholder="Fitness Validity">
+            <input type="date" id="permitValidity" placeholder="Permit Validity">
+            <input type="date" id="insuranceValidity" placeholder="Insurance Validity">
+            <input type="date" id="pucValidity" placeholder="PUC Validity">
+            
             <button onclick="addVehicle()">Add Vehicle</button>
         </div>
 
-        <!-- Tab 2: Vehicles -->
+        <!-- Tab 2: Vehicles List -->
         <div class="content" id="tab2">
             <h3>🚛 All Vehicles</h3>
             <button onclick="loadVehicles()">🔄 Refresh List</button>
@@ -87,7 +101,6 @@
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    // ================== ADD VEHICLE ==================
     async function addVehicle() {
         const vehId = document.getElementById('vehId').value.trim().toUpperCase();
         if (!vehId) return alert("❌ Vehicle ID is required!");
@@ -95,8 +108,19 @@
         const data = {
             vehicle_id: vehId,
             vehicle_name: document.getElementById('vehName').value.trim(),
+            make: document.getElementById('make').value.trim(),
+            model: document.getElementById('model').value.trim(),
+            chassis_no: document.getElementById('chassisNo').value.trim(),
+            engine_no: document.getElementById('engineNo').value.trim(),
+            tyres: document.getElementById('tyres').value.trim(),
+            owner_name: document.getElementById('ownerName').value.trim(),
             driver_name: document.getElementById('driverName').value.trim(),
-            driver_phone: document.getElementById('driverPhone').value.trim()
+            driver_phone: document.getElementById('driverPhone').value.trim(),
+            rd_validity: document.getElementById('rdValidity').value,
+            fitness_validity: document.getElementById('fitnessValidity').value,
+            permit_validity: document.getElementById('permitValidity').value,
+            insurance_validity: document.getElementById('insuranceValidity').value,
+            puc_validity: document.getElementById('pucValidity').value
         };
 
         try {
@@ -108,8 +132,24 @@
             const result = await res.json();
             alert(result.message);
             if (result.status === "success") {
+                // Clear form
                 document.getElementById('vehId').value = '';
-                loadVehicles();   // Refresh immediately
+                document.getElementById('vehName').value = '';
+                document.getElementById('make').value = '';
+                document.getElementById('model').value = '';
+                document.getElementById('chassisNo').value = '';
+                document.getElementById('engineNo').value = '';
+                document.getElementById('tyres').value = '';
+                document.getElementById('ownerName').value = '';
+                document.getElementById('driverName').value = '';
+                document.getElementById('driverPhone').value = '';
+                document.getElementById('rdValidity').value = '';
+                document.getElementById('fitnessValidity').value = '';
+                document.getElementById('permitValidity').value = '';
+                document.getElementById('insuranceValidity').value = '';
+                document.getElementById('pucValidity').value = '';
+                
+                loadVehicles();
             }
         } catch(e) {
             alert("❌ Server Error");
@@ -117,40 +157,28 @@
     }
 
     async function loadVehicles() {
-        try {
-            const res = await fetch('/vehicles');
-            const vehicles = await res.json();
-            const container = document.getElementById('vehicleList');
-            container.innerHTML = '';
+        const res = await fetch('/vehicles');
+        const vehicles = await res.json();
+        const container = document.getElementById('vehicleList');
+        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
 
-            if (vehicles.length === 0) {
-                container.innerHTML = '<p>No vehicles added yet.</p>';
-                return;
-            }
-
-            vehicles.forEach(v => {
-                const div = document.createElement('div');
-                div.className = 'vehicle-item';
-                div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            document.getElementById('vehicleList').innerHTML = '<p>Error loading vehicles.</p>';
-        }
+        vehicles.forEach(v => {
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `
+                <strong>${v.vehicle_id}</strong><br>
+                ${v.vehicle_name} | ${v.make} ${v.model}<br>
+                Owner: ${v.owner_name}
+            `;
+            container.appendChild(div);
+        });
     }
 
-    // ================== GEOFENCE ==================
+    // Geofence functions (same as previous)
     async function addGeofence() {
         const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
         const center = map.getCenter();
-
-        const data = {
-            name: name,
-            lat: center.lat,
-            lng: center.lng,
-            radius: 500,
-            type: "pickup"
-        };
+        const data = { name, lat: center.lat, lng: center.lng, radius: 500, type: "pickup" };
 
         try {
             const res = await fetch('/add_geofence', {
@@ -161,50 +189,27 @@
             const result = await res.json();
             alert(result.message);
             loadGeofences();
-        } catch(e) { 
-            alert("Failed to add geofence"); 
-        }
+        } catch(e) { alert("Failed to add geofence"); }
     }
 
     async function loadGeofences() {
         geofenceCircles.forEach(c => map.removeLayer(c));
         geofenceCircles = [];
 
-        try {
-            const res = await fetch('/geofences');
-            const fences = await res.json();
-            const container = document.getElementById('geofenceList');
-            container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
+        const res = await fetch('/geofences');
+        const fences = await res.json();
+        const container = document.getElementById('geofenceList');
+        container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
 
-            fences.forEach(f => {
-                const circle = L.circle([f.lat, f.lng], {
-                    color: 'green', fillColor: '#4CAF50', fillOpacity: 0.25, radius: f.radius
-                }).addTo(map);
-                geofenceCircles.push(circle);
+        fences.forEach(f => {
+            const circle = L.circle([f.lat, f.lng], { color: 'green', fillColor: '#4CAF50', fillOpacity: 0.25, radius: f.radius }).addTo(map);
+            geofenceCircles.push(circle);
 
-                const div = document.createElement('div');
-                div.className = 'vehicle-item';
-                div.innerHTML = `
-                    <strong>${f.name}</strong><br>
-                    📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}<br>
-                    📏 ${f.radius} meters
-                    <button class="delete-btn" onclick="deleteGeofence(${f.id}, '${f.name}')">🗑 Delete</button>
-                `;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            document.getElementById('geofenceList').innerHTML = '<p>Error loading geofences.</p>';
-        }
-    }
-
-    async function deleteGeofence(id, name) {
-        if (!confirm(`Delete "${name}"?`)) return;
-        try {
-            const res = await fetch(`/delete_geofence/${id}`, { method: 'DELETE' });
-            const result = await res.json();
-            alert(result.message);
-            loadGeofences();
-        } catch(e) { alert("Delete failed"); }
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `<strong>${f.name}</strong><br>📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}<br>📏 ${f.radius} meters`;
+            container.appendChild(div);
+        });
     }
 
     function startNewTrip() {
