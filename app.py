@@ -19,6 +19,21 @@ def init_db():
     conn.commit()
     conn.close()
 
+conn.execute('''CREATE TABLE IF NOT EXISTS drivers 
+                    (driver_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     name TEXT,
+                     licence_no TEXT,
+                     mobile TEXT,
+                     home_no TEXT,
+                     village TEXT,
+                     district TEXT,
+                     state TEXT,
+                     pin TEXT,
+                     aadhar_no TEXT,
+                     agent_name TEXT,
+                     licence_image TEXT,
+                     aadhar_image TEXT)''')
+
 init_db()
 
 def get_distance(lat1, lon1, lat2, lon2):
@@ -92,6 +107,34 @@ def delete_geofence(geofence_id):
     conn.commit()
     conn.close()
     return jsonify({"status": "success", "message": "Geofence deleted"})
+
+@app.route('/add_driver', methods=['POST'])
+def add_driver():
+    try:
+        data = request.form
+        conn = sqlite3.connect('trips.db')
+        conn.execute("""INSERT INTO drivers 
+                        (name, licence_no, mobile, home_no, village, district, state, pin, 
+                         aadhar_no, agent_name, licence_image, aadhar_image) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                     (data.get('name'), data.get('licence_no'), data.get('mobile'),
+                      data.get('home_no'), data.get('village'), data.get('district'),
+                      data.get('state'), data.get('pin'), data.get('aadhar_no'),
+                      data.get('agent_name'), data.get('licence_image'), data.get('aadhar_image')))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": "Driver added successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/drivers')
+def get_drivers():
+    conn = sqlite3.connect('trips.db')
+    cursor = conn.execute("SELECT * FROM drivers")
+    drivers = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(drivers)
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
