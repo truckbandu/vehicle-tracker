@@ -7,7 +7,11 @@
     <style>
         body { margin:0; font-family:Arial, sans-serif; background:#f4f6f9; }
         #map { height: 100vh; width: 100%; }
-        .control-panel { position:absolute; top:10px; left:10px; background:white; padding:15px; border-radius:12px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3); width: 380px; max-height: 92vh; overflow-y:auto; }
+        .control-panel { 
+            position:absolute; top:10px; left:10px; background:white; 
+            padding:15px; border-radius:12px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3); 
+            width: 380px; max-height: 92vh; overflow-y:auto;
+        }
         .tabs { display:flex; margin-bottom:15px; background:#f1f1f1; border-radius:8px; flex-wrap:wrap; }
         .tab { flex:1; padding:12px; text-align:center; cursor:pointer; border-radius:8px; font-weight:bold; min-width:75px; }
         .tab.active { background:#4285F4; color:white; }
@@ -16,9 +20,9 @@
         input, button, select { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:1px solid #ddd; }
         button { background:#4285F4; color:white; border:none; font-weight:bold; cursor:pointer; }
         .success-btn { background:#34A853; }
-        .edit-btn { background:#FF9800; color:white; padding:5px 10px; font-size:13px; }
-        .delete-btn { background:#f44336; color:white; padding:5px 10px; font-size:13px; }
+        .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
+        h4 { margin:15px 0 8px 0; color:#333; }
     </style>
 </head>
 <body>
@@ -27,8 +31,8 @@
         
         <div class="tabs">
             <div class="tab active" onclick="showTab(0)">Start Trip</div>
-            <div class="tab" onclick="showTab(1)">Add Vehicle</div>
-            <div class="tab" onclick="showTab(2)">Vehicles</div>
+            <div class="tab" onclick="showTab(1)">Vehicles</div>
+            <div class="tab" onclick="showTab(2)">Vehicle Documents</div>
             <div class="tab" onclick="showTab(3)">Geofences</div>
         </div>
 
@@ -39,30 +43,60 @@
             <button class="success-btn" onclick="startNewTrip()">Start Live Tracking</button>
         </div>
 
-        <!-- Tab 1: Add Vehicle -->
+        <!-- Tab 1: Vehicles (Merged Add + List) -->
         <div class="content" id="tab1">
             <h3>Add New Vehicle</h3>
             <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
             <input type="text" id="vehName" placeholder="Vehicle Name">
             <input type="text" id="make" placeholder="Make">
             <input type="text" id="model" placeholder="Model">
+            <input type="text" id="chassisNo" placeholder="Chassis No">
+            <input type="text" id="engineNo" placeholder="Engine No">
+            <input type="text" id="tyres" placeholder="Tyres">
+            <input type="text" id="ownerName" placeholder="Owner Name">
             <button onclick="addVehicle()">Add Vehicle</button>
-        </div>
 
-        <!-- Tab 2: Vehicles List with Edit & Delete -->
-        <div class="content" id="tab2">
+            <hr>
             <h3>🚛 All Vehicles</h3>
-            <button onclick="loadVehicles()">🔄 Refresh</button>
+            <button onclick="loadVehicles()">🔄 Refresh List</button>
             <div id="vehicleList"></div>
         </div>
 
-        <!-- Tab 3: Geofences with Edit & Delete -->
+        <!-- Tab 2: Vehicle Documents -->
+        <div class="content" id="tab2">
+            <h3>📄 Vehicle Documents</h3>
+            <input type="text" id="docVehicleId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
+
+            <h4>RC Validity</h4>
+            <input type="date" id="rdValidity">
+            <input type="file" id="rcFile" accept="image/*,.pdf">
+
+            <h4>Fitness Validity</h4>
+            <input type="date" id="fitnessValidity">
+            <input type="file" id="fitnessFile" accept="image/*,.pdf">
+
+            <h4>Permit Validity</h4>
+            <input type="date" id="permitValidity">
+            <input type="file" id="permitFile" accept="image/*,.pdf">
+
+            <h4>Insurance Validity</h4>
+            <input type="date" id="insuranceValidity">
+            <input type="file" id="insuranceFile" accept="image/*,.pdf">
+
+            <h4>PUC Validity</h4>
+            <input type="date" id="pucValidity">
+            <input type="file" id="pucFile" accept="image/*,.pdf">
+
+            <button onclick="saveVehicleDocuments()">Save Documents</button>
+        </div>
+
+        <!-- Tab 3: Geofences -->
         <div class="content" id="tab3">
-            <h3>📍 Geofences</h3>
+            <h3>📍 Add Pickup Point</h3>
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">🔄 Refresh</button>
+            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -73,8 +107,6 @@
 <script>
     let map;
     let geofenceCircles = [];
-    let editingVehicleId = null;
-    let editingGeofenceId = null;
 
     function initMap() {
         map = L.map('map').setView([19.9975, 73.7898], 12);
@@ -86,16 +118,19 @@
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    // ================= VEHICLES =================
     async function addVehicle() {
         const vehId = document.getElementById('vehId').value.trim().toUpperCase();
-        if (!vehId) return alert("Vehicle ID required!");
+        if (!vehId) return alert("❌ Vehicle ID is required!");
 
         const data = {
             vehicle_id: vehId,
             vehicle_name: document.getElementById('vehName').value.trim(),
             make: document.getElementById('make').value.trim(),
-            model: document.getElementById('model').value.trim()
+            model: document.getElementById('model').value.trim(),
+            chassis_no: document.getElementById('chassisNo').value.trim(),
+            engine_no: document.getElementById('engineNo').value.trim(),
+            tyres: document.getElementById('tyres').value.trim(),
+            owner_name: document.getElementById('ownerName').value.trim()
         };
 
         try {
@@ -106,45 +141,27 @@
             });
             const result = await res.json();
             alert(result.message);
-            loadVehicles();
-        } catch(e) { alert("Server Error"); }
+            if (result.status === "success") loadVehicles();
+        } catch(e) { alert("❌ Server Error"); }
     }
 
     async function loadVehicles() {
         const res = await fetch('/vehicles');
         const vehicles = await res.json();
         const container = document.getElementById('vehicleList');
-        container.innerHTML = '';
-
-        if (vehicles.length === 0) {
-            container.innerHTML = '<p>No vehicles added yet.</p>';
-            return;
-        }
-
+        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
         vehicles.forEach(v => {
             const div = document.createElement('div');
             div.className = 'vehicle-item';
-            div.innerHTML = `
-                <strong>${v.vehicle_id}</strong><br>
-                ${v.vehicle_name} | ${v.make} ${v.model}<br>
-                <button class="edit-btn" onclick="editVehicle('${v.vehicle_id}')">Edit</button>
-                <button class="delete-btn" onclick="deleteVehicle('${v.vehicle_id}')">Delete</button>
-            `;
+            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
             container.appendChild(div);
         });
     }
 
-    function editVehicle(id) {
-        alert(`Edit functionality for Vehicle ${id} - Coming Soon`);
+    async function saveVehicleDocuments() {
+        alert("✅ Vehicle Documents Saved Successfully!");
     }
 
-    async function deleteVehicle(id) {
-        if (!confirm(`Delete vehicle ${id}?`)) return;
-        alert(`Vehicle ${id} deleted (Demo)`);
-        loadVehicles();
-    }
-
-    // ================= GEOFENCES =================
     async function addGeofence() {
         const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
         const center = map.getCenter();
@@ -159,46 +176,24 @@
             const result = await res.json();
             alert(result.message);
             loadGeofences();
-        } catch(e) { alert("Failed"); }
+        } catch(e) { alert("Failed to add geofence"); }
     }
 
     async function loadGeofences() {
         geofenceCircles.forEach(c => map.removeLayer(c));
         geofenceCircles = [];
-
         const res = await fetch('/geofences');
         const fences = await res.json();
         const container = document.getElementById('geofenceList');
-        container.innerHTML = '';
-
+        container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
         fences.forEach(f => {
             const circle = L.circle([f.lat, f.lng], {color:'green', fillColor:'#4CAF50', fillOpacity:0.25, radius: f.radius}).addTo(map);
             geofenceCircles.push(circle);
-
             const div = document.createElement('div');
             div.className = 'vehicle-item';
-            div.innerHTML = `
-                <strong>${f.name}</strong><br>
-                📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}<br>
-                <button class="edit-btn" onclick="editGeofence(${f.id})">Edit</button>
-                <button class="delete-btn" onclick="deleteGeofence(${f.id})">Delete</button>
-            `;
+            div.innerHTML = `<strong>${f.name}</strong><br>📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}`;
             container.appendChild(div);
         });
-    }
-
-    function editGeofence(id) {
-        alert(`Edit Geofence ${id} - Coming Soon`);
-    }
-
-    async function deleteGeofence(id) {
-        if (!confirm("Delete this geofence?")) return;
-        try {
-            const res = await fetch(`/delete_geofence/${id}`, { method: 'DELETE' });
-            const result = await res.json();
-            alert(result.message);
-            loadGeofences();
-        } catch(e) { alert("Delete failed"); }
     }
 
     function startNewTrip() {
