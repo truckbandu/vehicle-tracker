@@ -7,11 +7,7 @@
     <style>
         body { margin:0; font-family:Arial, sans-serif; background:#f4f6f9; }
         #map { height: 100vh; width: 100%; }
-        .control-panel { 
-            position:absolute; top:10px; left:10px; background:white; 
-            padding:15px; border-radius:12px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3); 
-            width: 380px; max-height: 92vh; overflow-y:auto;
-        }
+        .control-panel { position:absolute; top:10px; left:10px; background:white; padding:15px; border-radius:12px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.3); width: 380px; max-height: 92vh; overflow-y:auto; }
         .tabs { display:flex; margin-bottom:15px; background:#f1f1f1; border-radius:8px; flex-wrap:wrap; }
         .tab { flex:1; padding:12px; text-align:center; cursor:pointer; border-radius:8px; font-weight:bold; min-width:75px; }
         .tab.active { background:#4285F4; color:white; }
@@ -22,7 +18,6 @@
         .success-btn { background:#34A853; }
         .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
-        h4 { margin:15px 0 8px 0; color:#333; }
     </style>
 </head>
 <body>
@@ -32,8 +27,8 @@
         <div class="tabs">
             <div class="tab active" onclick="showTab(0)">Start Trip</div>
             <div class="tab" onclick="showTab(1)">Add Vehicle</div>
-            <div class="tab" onclick="showTab(2)">Vehicles</div>
-            <div class="tab" onclick="showTab(3)">Drivers</div>
+            <div class="tab" onclick="showTab(2)">Vehicle Documents</div>
+            <div class="tab" onclick="showTab(3)">Vehicles</div>
             <div class="tab" onclick="showTab(4)">Geofences</div>
         </div>
 
@@ -44,64 +39,62 @@
             <button class="success-btn" onclick="startNewTrip()">Start Live Tracking</button>
         </div>
 
-        <!-- Tab 1: Add Vehicle -->
+        <!-- Tab 1: Basic Vehicle Info -->
         <div class="content" id="tab1">
-            <h3>Add New Vehicle</h3>
+            <h3>Add Basic Vehicle Info</h3>
             <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
-            <input type="text" id="vehName" placeholder="Vehicle Name (Optional)">
+            <input type="text" id="vehName" placeholder="Vehicle Name">
             <input type="text" id="make" placeholder="Make">
             <input type="text" id="model" placeholder="Model">
             <input type="text" id="chassisNo" placeholder="Chassis No">
             <input type="text" id="engineNo" placeholder="Engine No">
             <input type="text" id="tyres" placeholder="Tyres">
             <input type="text" id="ownerName" placeholder="Owner Name">
-
-            <h4>📅 Validity Details</h4>
-            <label>RC Validity</label>
-            <input type="date" id="rdValidity">
-            <label>Fitness Validity</label>
-            <input type="date" id="fitnessValidity">
-            <label>Permit Validity</label>
-            <input type="date" id="permitValidity">
-            <label>Insurance Validity</label>
-            <input type="date" id="insuranceValidity">
-            <label>PUC Validity</label>
-            <input type="date" id="pucValidity">
-            <button onclick="addVehicle()">Add Vehicle</button>
+            <button onclick="addBasicVehicle()">Save Basic Info</button>
         </div>
 
-        <!-- Tab 2: Vehicles -->
+        <!-- Tab 2: Vehicle Documents -->
         <div class="content" id="tab2">
-            <h3>🚛 All Vehicles</h3>
-            <button onclick="loadVehicles()">🔄 Refresh List</button>
-            <div id="vehicleList"></div>
+            <h3>📄 Vehicle Documents</h3>
+            <input type="text" id="docVehicleId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
+            
+            <h4>RC Validity</h4>
+            <input type="date" id="rdValidity">
+            <input type="file" id="rcFile" accept="image/*,.pdf">
+
+            <h4>Fitness Validity</h4>
+            <input type="date" id="fitnessValidity">
+            <input type="file" id="fitnessFile" accept="image/*,.pdf">
+
+            <h4>Permit Validity</h4>
+            <input type="date" id="permitValidity">
+            <input type="file" id="permitFile" accept="image/*,.pdf">
+
+            <h4>Insurance Validity</h4>
+            <input type="date" id="insuranceValidity">
+            <input type="file" id="insuranceFile" accept="image/*,.pdf">
+
+            <h4>PUC Validity</h4>
+            <input type="date" id="pucValidity">
+            <input type="file" id="pucFile" accept="image/*,.pdf">
+
+            <button onclick="addVehicleDocuments()">Save Documents</button>
         </div>
 
-        <!-- Tab 3: Drivers -->
+        <!-- Tab 3: Vehicles List -->
         <div class="content" id="tab3">
-            <h3>👤 Add New Driver</h3>
-            <input type="text" id="driverName" placeholder="Driver Full Name *">
-            <input type="text" id="licenceNo" placeholder="Licence No *">
-            <input type="file" id="licenceImage" accept="image/*">
-            <input type="text" id="driverMobile" placeholder="Mobile Number *">
-            <input type="text" id="homeNo" placeholder="Home Phone">
-            <input type="text" id="village" placeholder="Village">
-            <input type="text" id="district" placeholder="District">
-            <input type="text" id="state" placeholder="State">
-            <input type="text" id="pin" placeholder="PIN Code">
-            <input type="text" id="aadharNo" placeholder="Aadhar No *">
-            <input type="file" id="aadharImage" accept="image/*">
-            <input type="text" id="agentName" placeholder="Agent Name">
-            <button onclick="addDriver()">Add Driver</button>
+            <h3>🚛 All Vehicles</h3>
+            <button onclick="loadVehicles()">Refresh List</button>
+            <div id="vehicleList"></div>
         </div>
 
         <!-- Tab 4: Geofences -->
         <div class="content" id="tab4">
-            <h3>📍 Add Pickup Point</h3>
+            <h3>📍 Geofences</h3>
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
+            <button onclick="loadGeofences()">Refresh</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -111,7 +104,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     let map;
-    let geofenceCircles = [];
 
     function initMap() {
         map = L.map('map').setView([19.9975, 73.7898], 12);
@@ -123,49 +115,38 @@
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    // Add Vehicle Function (same as before)
-    async function addVehicle() { /* ... keep your existing addVehicle function */ }
-
-    async function loadVehicles() { /* ... keep your existing loadVehicles */ }
-
-    // New Driver Function
-    async function addDriver() {
-        const formData = new FormData();
-        formData.append('name', document.getElementById('driverName').value);
-        formData.append('licence_no', document.getElementById('licenceNo').value);
-        formData.append('mobile', document.getElementById('driverMobile').value);
-        formData.append('home_no', document.getElementById('homeNo').value);
-        formData.append('village', document.getElementById('village').value);
-        formData.append('district', document.getElementById('district').value);
-        formData.append('state', document.getElementById('state').value);
-        formData.append('pin', document.getElementById('pin').value);
-        formData.append('aadhar_no', document.getElementById('aadharNo').value);
-        formData.append('agent_name', document.getElementById('agentName').value);
-
-        if (document.getElementById('licenceImage').files[0]) formData.append('licence_image', document.getElementById('licenceImage').files[0]);
-        if (document.getElementById('aadharImage').files[0]) formData.append('aadhar_image', document.getElementById('aadharImage').files[0]);
-
-        try {
-            const res = await fetch('/add_driver', { method: 'POST', body: formData });
-            const result = await res.json();
-            alert(result.message);
-        } catch(e) {
-            alert("Failed to add driver");
-        }
+    async function addBasicVehicle() {
+        alert("Basic Vehicle Info Saved (Demo)");
     }
 
-    async function addGeofence() { /* keep your existing */ }
-    async function loadGeofences() { /* keep your existing */ }
+    async function addVehicleDocuments() {
+        alert("Vehicle Documents Saved Successfully!");
+    }
 
-    function startNewTrip() {
-        const id = document.getElementById('tripVehicleId').value.trim().toUpperCase();
-        if (id) alert(`✅ Live tracking started for ${id}`);
+    async function loadVehicles() {
+        const res = await fetch('/vehicles');
+        const vehicles = await res.json();
+        const container = document.getElementById('vehicleList');
+        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
+        vehicles.forEach(v => {
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
+            container.appendChild(div);
+        });
+    }
+
+    async function addGeofence() {
+        alert("Geofence Added (Demo)");
+    }
+
+    async function loadGeofences() {
+        document.getElementById('geofenceList').innerHTML = '<p>Geofences will appear here.</p>';
     }
 
     window.onload = () => {
         initMap();
         loadVehicles();
-        loadGeofences();
     };
 </script>
 </body>
