@@ -16,7 +16,8 @@
         input, button, select { width:100%; padding:12px; margin:8px 0; border-radius:8px; border:1px solid #ddd; }
         button { background:#4285F4; color:white; border:none; font-weight:bold; cursor:pointer; }
         .success-btn { background:#34A853; }
-        .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
+        .edit-btn { background:#FF9800; color:white; padding:5px 10px; font-size:13px; }
+        .delete-btn { background:#f44336; color:white; padding:5px 10px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
     </style>
 </head>
@@ -27,9 +28,8 @@
         <div class="tabs">
             <div class="tab active" onclick="showTab(0)">Start Trip</div>
             <div class="tab" onclick="showTab(1)">Add Vehicle</div>
-            <div class="tab" onclick="showTab(2)">Vehicle Documents</div>
-            <div class="tab" onclick="showTab(3)">Vehicles</div>
-            <div class="tab" onclick="showTab(4)">Geofences</div>
+            <div class="tab" onclick="showTab(2)">Vehicles</div>
+            <div class="tab" onclick="showTab(3)">Geofences</div>
         </div>
 
         <!-- Tab 0: Start Trip -->
@@ -39,62 +39,30 @@
             <button class="success-btn" onclick="startNewTrip()">Start Live Tracking</button>
         </div>
 
-        <!-- Tab 1: Basic Vehicle Info -->
+        <!-- Tab 1: Add Vehicle -->
         <div class="content" id="tab1">
-            <h3>Add Basic Vehicle Info</h3>
+            <h3>Add New Vehicle</h3>
             <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
             <input type="text" id="vehName" placeholder="Vehicle Name">
             <input type="text" id="make" placeholder="Make">
             <input type="text" id="model" placeholder="Model">
-            <input type="text" id="chassisNo" placeholder="Chassis No">
-            <input type="text" id="engineNo" placeholder="Engine No">
-            <input type="text" id="tyres" placeholder="Tyres">
-            <input type="text" id="ownerName" placeholder="Owner Name">
-            <button onclick="addBasicVehicle()">Save Basic Info</button>
+            <button onclick="addVehicle()">Add Vehicle</button>
         </div>
 
-        <!-- Tab 2: Vehicle Documents -->
+        <!-- Tab 2: Vehicles List with Edit & Delete -->
         <div class="content" id="tab2">
-            <h3>📄 Vehicle Documents</h3>
-            <input type="text" id="docVehicleId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
-            
-            <h4>RC Validity</h4>
-            <input type="date" id="rdValidity">
-            <input type="file" id="rcFile" accept="image/*,.pdf">
-
-            <h4>Fitness Validity</h4>
-            <input type="date" id="fitnessValidity">
-            <input type="file" id="fitnessFile" accept="image/*,.pdf">
-
-            <h4>Permit Validity</h4>
-            <input type="date" id="permitValidity">
-            <input type="file" id="permitFile" accept="image/*,.pdf">
-
-            <h4>Insurance Validity</h4>
-            <input type="date" id="insuranceValidity">
-            <input type="file" id="insuranceFile" accept="image/*,.pdf">
-
-            <h4>PUC Validity</h4>
-            <input type="date" id="pucValidity">
-            <input type="file" id="pucFile" accept="image/*,.pdf">
-
-            <button onclick="addVehicleDocuments()">Save Documents</button>
-        </div>
-
-        <!-- Tab 3: Vehicles List -->
-        <div class="content" id="tab3">
             <h3>🚛 All Vehicles</h3>
-            <button onclick="loadVehicles()">Refresh List</button>
+            <button onclick="loadVehicles()">🔄 Refresh</button>
             <div id="vehicleList"></div>
         </div>
 
-        <!-- Tab 4: Geofences -->
-        <div class="content" id="tab4">
+        <!-- Tab 3: Geofences with Edit & Delete -->
+        <div class="content" id="tab3">
             <h3>📍 Geofences</h3>
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">Refresh</button>
+            <button onclick="loadGeofences()">🔄 Refresh</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -104,6 +72,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     let map;
+    let geofenceCircles = [];
+    let editingVehicleId = null;
+    let editingGeofenceId = null;
 
     function initMap() {
         map = L.map('map').setView([19.9975, 73.7898], 12);
@@ -115,38 +86,130 @@
         document.querySelectorAll('.content').forEach((c,i) => c.classList.toggle('active', i===n));
     }
 
-    async function addBasicVehicle() {
-        alert("Basic Vehicle Info Saved (Demo)");
-    }
+    // ================= VEHICLES =================
+    async function addVehicle() {
+        const vehId = document.getElementById('vehId').value.trim().toUpperCase();
+        if (!vehId) return alert("Vehicle ID required!");
 
-    async function addVehicleDocuments() {
-        alert("Vehicle Documents Saved Successfully!");
+        const data = {
+            vehicle_id: vehId,
+            vehicle_name: document.getElementById('vehName').value.trim(),
+            make: document.getElementById('make').value.trim(),
+            model: document.getElementById('model').value.trim()
+        };
+
+        try {
+            const res = await fetch('/add_vehicle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            alert(result.message);
+            loadVehicles();
+        } catch(e) { alert("Server Error"); }
     }
 
     async function loadVehicles() {
         const res = await fetch('/vehicles');
         const vehicles = await res.json();
         const container = document.getElementById('vehicleList');
-        container.innerHTML = vehicles.length ? '' : '<p>No vehicles added yet.</p>';
+        container.innerHTML = '';
+
+        if (vehicles.length === 0) {
+            container.innerHTML = '<p>No vehicles added yet.</p>';
+            return;
+        }
+
         vehicles.forEach(v => {
             const div = document.createElement('div');
             div.className = 'vehicle-item';
-            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
+            div.innerHTML = `
+                <strong>${v.vehicle_id}</strong><br>
+                ${v.vehicle_name} | ${v.make} ${v.model}<br>
+                <button class="edit-btn" onclick="editVehicle('${v.vehicle_id}')">Edit</button>
+                <button class="delete-btn" onclick="deleteVehicle('${v.vehicle_id}')">Delete</button>
+            `;
             container.appendChild(div);
         });
     }
 
+    function editVehicle(id) {
+        alert(`Edit functionality for Vehicle ${id} - Coming Soon`);
+    }
+
+    async function deleteVehicle(id) {
+        if (!confirm(`Delete vehicle ${id}?`)) return;
+        alert(`Vehicle ${id} deleted (Demo)`);
+        loadVehicles();
+    }
+
+    // ================= GEOFENCES =================
     async function addGeofence() {
-        alert("Geofence Added (Demo)");
+        const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
+        const center = map.getCenter();
+        const data = { name, lat: center.lat, lng: center.lng, radius: 500, type: "pickup" };
+
+        try {
+            const res = await fetch('/add_geofence', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            alert(result.message);
+            loadGeofences();
+        } catch(e) { alert("Failed"); }
     }
 
     async function loadGeofences() {
-        document.getElementById('geofenceList').innerHTML = '<p>Geofences will appear here.</p>';
+        geofenceCircles.forEach(c => map.removeLayer(c));
+        geofenceCircles = [];
+
+        const res = await fetch('/geofences');
+        const fences = await res.json();
+        const container = document.getElementById('geofenceList');
+        container.innerHTML = '';
+
+        fences.forEach(f => {
+            const circle = L.circle([f.lat, f.lng], {color:'green', fillColor:'#4CAF50', fillOpacity:0.25, radius: f.radius}).addTo(map);
+            geofenceCircles.push(circle);
+
+            const div = document.createElement('div');
+            div.className = 'vehicle-item';
+            div.innerHTML = `
+                <strong>${f.name}</strong><br>
+                📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}<br>
+                <button class="edit-btn" onclick="editGeofence(${f.id})">Edit</button>
+                <button class="delete-btn" onclick="deleteGeofence(${f.id})">Delete</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function editGeofence(id) {
+        alert(`Edit Geofence ${id} - Coming Soon`);
+    }
+
+    async function deleteGeofence(id) {
+        if (!confirm("Delete this geofence?")) return;
+        try {
+            const res = await fetch(`/delete_geofence/${id}`, { method: 'DELETE' });
+            const result = await res.json();
+            alert(result.message);
+            loadGeofences();
+        } catch(e) { alert("Delete failed"); }
+    }
+
+    function startNewTrip() {
+        const id = document.getElementById('tripVehicleId').value.trim().toUpperCase();
+        if (id) alert(`✅ Live tracking started for ${id}`);
     }
 
     window.onload = () => {
         initMap();
         loadVehicles();
+        loadGeofences();
     };
 </script>
 </body>
