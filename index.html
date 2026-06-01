@@ -22,7 +22,6 @@
         .success-btn { background:#34A853; }
         .delete-btn { background:#f44336; color:white; padding:5px 12px; font-size:13px; }
         .vehicle-item { padding:12px; margin:8px 0; background:#e8f0fe; border-radius:8px; }
-        h4 { margin:15px 0 8px 0; color:#333; }
     </style>
 </head>
 <body>
@@ -31,9 +30,10 @@
         
         <div class="tabs">
             <div class="tab active" onclick="showTab(0)">Start Trip</div>
-            <div class="tab" onclick="showTab(1)">Vehicles</div>
-            <div class="tab" onclick="showTab(2)">Vehicle Documents</div>
-            <div class="tab" onclick="showTab(3)">Geofences</div>
+            <div class="tab" onclick="showTab(1)">Add Vehicle</div>
+            <div class="tab" onclick="showTab(2)">Vehicles</div>
+            <div class="tab" onclick="showTab(3)">Vehicle Documents</div>
+            <div class="tab" onclick="showTab(4)">Geofences</div>
         </div>
 
         <!-- Tab 0: Start Trip -->
@@ -43,60 +43,47 @@
             <button class="success-btn" onclick="startNewTrip()">Start Live Tracking</button>
         </div>
 
-        <!-- Tab 1: Vehicles (Merged Add + List) -->
+        <!-- Tab 1: Add Vehicle -->
         <div class="content" id="tab1">
             <h3>Add New Vehicle</h3>
             <input type="text" id="vehId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
             <input type="text" id="vehName" placeholder="Vehicle Name">
             <input type="text" id="make" placeholder="Make">
             <input type="text" id="model" placeholder="Model">
+            <input type="text" id="bodyType" placeholder="Body Type (e.g. Tanker, Trailer, Truck, Bus)">
             <input type="text" id="chassisNo" placeholder="Chassis No">
             <input type="text" id="engineNo" placeholder="Engine No">
             <input type="text" id="tyres" placeholder="Tyres">
             <input type="text" id="ownerName" placeholder="Owner Name">
             <button onclick="addVehicle()">Add Vehicle</button>
+        </div>
 
-            <hr>
+        <!-- Tab 2: Vehicles List -->
+        <div class="content" id="tab2">
             <h3>🚛 All Vehicles</h3>
             <button onclick="loadVehicles()">🔄 Refresh List</button>
             <div id="vehicleList"></div>
         </div>
 
-        <!-- Tab 2: Vehicle Documents -->
-        <div class="content" id="tab2">
+        <!-- Tab 3: Vehicle Documents -->
+        <div class="content" id="tab3">
             <h3>📄 Vehicle Documents</h3>
             <input type="text" id="docVehicleId" placeholder="Vehicle ID *" style="text-transform:uppercase;">
-
-            <h4>RC Validity</h4>
+            <h4>Validity Details</h4>
+            <label>RC Validity</label>
             <input type="date" id="rdValidity">
             <input type="file" id="rcFile" accept="image/*,.pdf">
-
-            <h4>Fitness Validity</h4>
-            <input type="date" id="fitnessValidity">
-            <input type="file" id="fitnessFile" accept="image/*,.pdf">
-
-            <h4>Permit Validity</h4>
-            <input type="date" id="permitValidity">
-            <input type="file" id="permitFile" accept="image/*,.pdf">
-
-            <h4>Insurance Validity</h4>
-            <input type="date" id="insuranceValidity">
-            <input type="file" id="insuranceFile" accept="image/*,.pdf">
-
-            <h4>PUC Validity</h4>
-            <input type="date" id="pucValidity">
-            <input type="file" id="pucFile" accept="image/*,.pdf">
-
+            <!-- Other document fields can be added similarly -->
             <button onclick="saveVehicleDocuments()">Save Documents</button>
         </div>
 
-        <!-- Tab 3: Geofences -->
-        <div class="content" id="tab3">
+        <!-- Tab 4: Geofences -->
+        <div class="content" id="tab4">
             <h3>📍 Add Pickup Point</h3>
             <input type="text" id="fenceName" placeholder="Point Name">
             <button onclick="addGeofence()">Add at Map Center</button>
             <hr>
-            <button onclick="loadGeofences()">🔄 Refresh Map & List</button>
+            <button onclick="loadGeofences()">🔄 Refresh</button>
             <div id="geofenceList"></div>
         </div>
     </div>
@@ -106,7 +93,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     let map;
-    let geofenceCircles = [];
 
     function initMap() {
         map = L.map('map').setView([19.9975, 73.7898], 12);
@@ -127,6 +113,7 @@
             vehicle_name: document.getElementById('vehName').value.trim(),
             make: document.getElementById('make').value.trim(),
             model: document.getElementById('model').value.trim(),
+            body_type: document.getElementById('bodyType').value.trim(),
             chassis_no: document.getElementById('chassisNo').value.trim(),
             engine_no: document.getElementById('engineNo').value.trim(),
             tyres: document.getElementById('tyres').value.trim(),
@@ -153,45 +140,7 @@
         vehicles.forEach(v => {
             const div = document.createElement('div');
             div.className = 'vehicle-item';
-            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''}`;
-            container.appendChild(div);
-        });
-    }
-
-    async function saveVehicleDocuments() {
-        alert("✅ Vehicle Documents Saved Successfully!");
-    }
-
-    async function addGeofence() {
-        const name = document.getElementById('fenceName').value.trim() || "Pickup Point";
-        const center = map.getCenter();
-        const data = { name, lat: center.lat, lng: center.lng, radius: 500, type: "pickup" };
-
-        try {
-            const res = await fetch('/add_geofence', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            alert(result.message);
-            loadGeofences();
-        } catch(e) { alert("Failed to add geofence"); }
-    }
-
-    async function loadGeofences() {
-        geofenceCircles.forEach(c => map.removeLayer(c));
-        geofenceCircles = [];
-        const res = await fetch('/geofences');
-        const fences = await res.json();
-        const container = document.getElementById('geofenceList');
-        container.innerHTML = fences.length ? '' : '<p>No geofences added yet.</p>';
-        fences.forEach(f => {
-            const circle = L.circle([f.lat, f.lng], {color:'green', fillColor:'#4CAF50', fillOpacity:0.25, radius: f.radius}).addTo(map);
-            geofenceCircles.push(circle);
-            const div = document.createElement('div');
-            div.className = 'vehicle-item';
-            div.innerHTML = `<strong>${f.name}</strong><br>📍 ${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}`;
+            div.innerHTML = `<strong>${v.vehicle_id}</strong><br>${v.vehicle_name || ''} | ${v.body_type || ''}`;
             container.appendChild(div);
         });
     }
@@ -204,7 +153,6 @@
     window.onload = () => {
         initMap();
         loadVehicles();
-        loadGeofences();
     };
 </script>
 </body>
