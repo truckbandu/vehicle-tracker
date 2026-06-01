@@ -13,32 +13,57 @@ def init_db():
     
     # Vehicles Table
     conn.execute('''CREATE TABLE IF NOT EXISTS vehicles 
-                    (vehicle_id TEXT PRIMARY KEY, vehicle_name TEXT, driver_name TEXT, driver_phone TEXT,
-                     chassis_no TEXT, engine_no TEXT, tyres TEXT, make TEXT, model TEXT, owner_name TEXT,
-                     rd_validity TEXT, fitness_validity TEXT, permit_validity TEXT, 
-                     insurance_validity TEXT, puc_validity TEXT)''')
+                    (vehicle_id TEXT PRIMARY KEY, 
+                     vehicle_name TEXT, 
+                     make TEXT, 
+                     model TEXT, 
+                     chassis_no TEXT, 
+                     engine_no TEXT, 
+                     tyres TEXT, 
+                     owner_name TEXT,
+                     driver_name TEXT, 
+                     driver_phone TEXT,
+                     rd_validity TEXT, 
+                     fitness_validity TEXT, 
+                     permit_validity TEXT, 
+                     insurance_validity TEXT, 
+                     puc_validity TEXT)''')
     
-    # Drivers Table
-    conn.execute('''CREATE TABLE IF NOT EXISTS drivers 
-                    (driver_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     name TEXT, licence_no TEXT, mobile TEXT, home_no TEXT,
-                     village TEXT, district TEXT, state TEXT, pin TEXT,
-                     aadhar_no TEXT, agent_name TEXT,
-                     licence_image TEXT, aadhar_image TEXT)''')
-    
-    # Locations & Geofences
-    conn.execute('''CREATE TABLE IF NOT EXISTS locations 
-                    (id INTEGER PRIMARY KEY, vehicle_id TEXT, lat REAL, lng REAL, 
-                     speed REAL, timestamp TEXT, trip_id TEXT)''')
-    
+    # Geofences Table
     conn.execute('''CREATE TABLE IF NOT EXISTS geofences 
-                    (id INTEGER PRIMARY KEY, name TEXT, lat REAL, lng REAL, 
-                     radius REAL, type TEXT)''')
+                    (id INTEGER PRIMARY KEY, 
+                     name TEXT, 
+                     lat REAL, 
+                     lng REAL, 
+                     radius REAL, 
+                     type TEXT)''')
+    
+    # Locations Table
+    conn.execute('''CREATE TABLE IF NOT EXISTS locations 
+                    (id INTEGER PRIMARY KEY, 
+                     vehicle_id TEXT, 
+                     lat REAL, 
+                     lng REAL, 
+                     speed REAL, 
+                     timestamp TEXT, 
+                     trip_id TEXT)''')
     
     conn.commit()
     conn.close()
 
 init_db()
+
+def get_distance(lat1, lon1, lat2, lon2):
+    R = 6371000
+    φ1 = math.radians(lat1)
+    φ2 = math.radians(lat2)
+    Δφ = math.radians(lat2 - lat1)
+    Δλ = math.radians(lon2 - lon1)
+    a = math.sin(Δφ/2)**2 + math.cos(φ1) * math.cos(φ2) * math.sin(Δλ/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+# ====================== ROUTES ======================
 
 @app.route('/')
 def index():
@@ -57,12 +82,26 @@ def add_vehicle():
             return jsonify({"status": "error", "message": "Vehicle ID required"}), 400
 
         conn = sqlite3.connect('trips.db')
-        conn.execute("""INSERT OR REPLACE INTO vehicles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                     (vehicle_id, data.get('vehicle_name',''), data.get('driver_name',''), data.get('driver_phone',''),
-                      data.get('chassis_no',''), data.get('engine_no',''), data.get('tyres',''),
-                      data.get('make',''), data.get('model',''), data.get('owner_name',''),
-                      data.get('rd_validity',''), data.get('fitness_validity',''), data.get('permit_validity',''),
-                      data.get('insurance_validity',''), data.get('puc_validity','')))
+        conn.execute("""INSERT OR REPLACE INTO vehicles 
+                        (vehicle_id, vehicle_name, make, model, chassis_no, engine_no, tyres, owner_name,
+                         driver_name, driver_phone, rd_validity, fitness_validity, permit_validity, 
+                         insurance_validity, puc_validity) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                     (vehicle_id,
+                      data.get('vehicle_name',''),
+                      data.get('make',''),
+                      data.get('model',''),
+                      data.get('chassis_no',''),
+                      data.get('engine_no',''),
+                      data.get('tyres',''),
+                      data.get('owner_name',''),
+                      data.get('driver_name',''),
+                      data.get('driver_phone',''),
+                      data.get('rd_validity',''),
+                      data.get('fitness_validity',''),
+                      data.get('permit_validity',''),
+                      data.get('insurance_validity',''),
+                      data.get('puc_validity','')))
         conn.commit()
         conn.close()
         return jsonify({"status": "success", "message": f"Vehicle {vehicle_id} added successfully"})
@@ -104,7 +143,7 @@ def delete_geofence(geofence_id):
     conn.execute("DELETE FROM geofences WHERE id = ?", (geofence_id,))
     conn.commit()
     conn.close()
-    return jsonify({"status": "success", "message": "Geofence deleted"})
+    return jsonify({"status": "success", "message": "Geofence deleted successfully"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
